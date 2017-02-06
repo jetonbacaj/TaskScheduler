@@ -1,0 +1,48 @@
+package taskcoordinator;
+dialect  "mvel"
+
+rule "Deferred tasks first"
+    salience 1000
+    when
+        $tasks : Tasks(deferred)
+        $task : Task() from $tasks.tasks
+    then
+        insert($task);
+end
+
+rule "Other tasks after deferred tasks"
+    salience 1000
+    when
+        not Task(deferred)
+        $tasks : Tasks(!deferred)
+        $task : Task() from $tasks.tasks
+    then
+        insert($task);
+end
+
+rule "Remove tasks and servers which have been assigned"
+    salience 1000
+    when
+        $task : Task(server != null, $server : server)
+    then
+        retract($task)
+        retract($server)
+end
+
+rule "Remove orphaned BidResponses"
+    salience 1000
+    when
+        $response : BidResponse()
+        not Server(this == $response.server)
+    then
+        retract($response)
+end
+
+rule "Remove tasks which couldn't be assigned"
+    salience 0
+    when
+        $task : Task(server == null)
+    then
+        retract($task)
+end
+

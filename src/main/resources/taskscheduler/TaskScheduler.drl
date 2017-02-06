@@ -1,0 +1,69 @@
+package taskscheduler;
+import java.text.MessageFormat
+dialect  "mvel"
+
+rule "NOT_RANKED: resources available"
+    when
+        $task: Task(status == Task.Status.NOT_RANKED, $diskNeeded : diskNeeded, $cpuNeeded : cpuNeeded)
+        $disk : Disk(available - $diskNeeded >= 0)
+        $cpu : Cpu(available - $cpuNeeded >= 0)
+    then
+        $disk.setAvailable($disk.getAvailable() - $diskNeeded);
+        $cpu.setAvailable($cpu.getAvailable() - $cpuNeeded);
+        $task.setStatus(Task.Status.STARTED);
+        update($disk)
+        update($cpu)
+        update($task)
+end
+
+
+rule "Not started"
+    when
+        $task : Task(status == Task.Status.NOT_STARTED, $diskNeeded : diskNeeded, $cpuNeeded : cpuNeeded, $priority : priority)
+        not Task(priority > $priority, status == Task.Status.NOT_STARTED)
+        $disk : Disk(available - $diskNeeded >= 0)
+        $cpu : Cpu(available - $cpuNeeded >= 0)
+        $clock: Clock()
+    then
+        $disk.setAvailable($disk.getAvailable() - $diskNeeded);
+        $cpu.setAvailable($cpu.getAvailable() - $cpuNeeded);
+        $task.setStatus(Task.Status.STARTED);
+        $task.setActualRank($clock.getQueue());
+        $clock.setQueue($clock.getQueue() + 1);
+        update($disk)
+        update($cpu)
+        update($task)
+        update($clock)
+end
+
+rule "Not ranked"
+    when
+        $task: Task(status == Task.Status.NOT_SCHEDULED)
+    then
+end
+
+rule "Running"
+    when
+        $task: Task(status == Task.Status.ALLOCATED, $diskNeeded : diskNeeded, $cpuNeeded : cpuNeeded)
+        $disk : Disk()
+        $cpu : Cpu()
+    then
+        $disk.setAvailable($disk.getAvailable() - $diskNeeded);
+        $cpu.setAvailable($cpu.getAvailable() - $cpuNeeded);
+        update($disk)
+        update($cpu)
+        retract($task)
+end
+
+rule "Completed"
+    when
+        $task: Task(status == Task.Status.COMPLETED, $diskNeeded : diskNeeded, $cpuNeeded : cpuNeeded)
+        $disk : Disk()
+        $cpu : Cpu()
+    then
+        $disk.setAvailable($disk.getAvailable() + $diskNeeded);
+        $cpu.setAvailable($cpu.getAvailable() + $cpuNeeded);
+        update($disk)
+        update($cpu)
+        retract($task)
+end

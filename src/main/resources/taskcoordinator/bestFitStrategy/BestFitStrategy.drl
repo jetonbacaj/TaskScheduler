@@ -1,0 +1,32 @@
+package taskcoordinator;
+dialect  "mvel"
+
+rule "Any server ready now"
+    salience 100
+    when
+        $server : Server()
+        $task : Task()
+        $response : BidResponse(task == $task, server == $server, timeUntilStart == 0)
+        not BidResponse(task == $task, timeUntilStart == 0, tempSpaceRemaining > $response.tempSpaceRemaining)
+    then
+        $task.setRule(drools.getRule().getName());
+        modify($task) {
+            setServer($server),
+            setEta($response.timeUntilComplete)
+        }
+end
+
+rule "Any server without waiting task"
+    salience 99
+    when
+        $server : Server()
+        $task : Task()
+        $response : BidResponse(task == $task, server == $server, !hasWaitingTask)
+        not BidResponse(task == $task, timeUntilStart == 0, timeUntilStart < $response.timeUntilStart)
+    then
+        $task.setRule(drools.getRule().getName());
+        modify($task) {
+            setServer($server),
+            setEta($response.timeUntilComplete)
+        }
+end

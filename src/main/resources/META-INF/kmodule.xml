@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kmodule xmlns="http://www.drools.org/xsd/kmodule">
+    <kbase name="KBDefaults" packages="taskcoordinator.default"/>
+    <kbase name="KBETAPreferenceStrategy" packages="taskcoordinator.etaPreferenceStrategy" includes="KBDefaults"/>
+    <kbase name="KBFileAffinityStrategy" packages="taskcoordinator.fileAffinityStrategy" includes="KBDefaults"/>
+    <kbase name="KBBestFitStrategy" packages="taskcoordinator.bestFitStrategy" includes="KBDefaults"/>
+</kmodule>
